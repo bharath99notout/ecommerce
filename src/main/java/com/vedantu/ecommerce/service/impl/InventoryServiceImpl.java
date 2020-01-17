@@ -64,14 +64,8 @@ public class InventoryServiceImpl implements InventoryService {
         List<ItemsInfo> inStockItems = new ArrayList<>();
         for (ItemsInfo itemsInfo: itemsInfoList) {
             if (itemsInfo.getProductId() != null){
-
-                Inventory inventory = inventoryRepository.findByProductId(itemsInfo.getProductId());
-                if (inventory.getQuantity() < itemsInfo.getOrderQty()){
-                    logger.info("INSUFFICIENT_INVENTORY : inventory {} and orderQty", inventory, itemsInfo.getOrderQty());
-                    orderResponse.setResponseString(ResponseMessage.INSUFFICIENT_INVENTORY);
-                    return orderResponse;
-                }
-                reduceInventory(inventory, itemsInfo.getOrderQty());
+                logger.info("check and assign the inventory : {}", itemsInfo.getProductId());
+                reduceInventory(itemsInfo, itemsInfo.getOrderQty());
             }
             logger.info("In stock items : {}", itemsInfo);
             inStockItems.add(itemsInfo);
@@ -81,8 +75,15 @@ public class InventoryServiceImpl implements InventoryService {
         return orderResponse;
     }
 
-    private synchronized void reduceInventory(Inventory inventory, int orderQty){
+    private synchronized OrderResponse reduceInventory(ItemsInfo itemsInfo, int orderQty){
 
+        OrderResponse orderResponse = new OrderResponse();
+        Inventory inventory = inventoryRepository.findByProductId(itemsInfo.getProductId());
+        if (inventory.getQuantity() < itemsInfo.getOrderQty()){
+            logger.info("INSUFFICIENT_INVENTORY : inventory {} and orderQty", inventory, itemsInfo.getOrderQty());
+            orderResponse.setResponseString(ResponseMessage.INSUFFICIENT_INVENTORY);
+            return orderResponse;
+        }
         inventory.setQuantity(inventory.getQuantity() - orderQty);
         inventoryRepository.save(inventory);
         logger.info("Inventory reduced for order : {}", inventory);
